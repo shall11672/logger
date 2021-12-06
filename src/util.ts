@@ -1,31 +1,31 @@
-import traverse from "traverse";
-
 export const SENSITIVE_KEYWORDS = ['apikey', 'password', 'username', 'login'];
 export const SENSITIVE_MESSAGE_OVERRIDE = '<REDACTED>';
 
 export const scrubString = (message: string): string => {
   if (typeof message !== 'string') {
-    // remove this once we know stuff works
     throw new Error('Invalid message');
   }
-  const possibleRedaction = SENSITIVE_KEYWORDS.filter((keyword) => (message.indexOf(keyword) >= 0));
+  const possibleRedaction = SENSITIVE_KEYWORDS.filter((keyword) => (
+    message.indexOf(keyword) >= 0 || message.toLowerCase().indexOf(keyword) >= 0)
+  );
   return possibleRedaction.length > 0 ? SENSITIVE_MESSAGE_OVERRIDE : message;
 }
 
 export const scrubMessage = (logMessage: string | object): string | object => {
-  if (typeof logMessage !== 'string' && typeof logMessage !== 'object') return logMessage;
+  if ((typeof logMessage !== 'string' && typeof logMessage !== 'object') || logMessage === null) return logMessage;
 
   if (typeof logMessage === 'string') {
     return scrubString(logMessage);
   }
 
-  traverse(logMessage).forEach(function (value: any) {
-    if (this.isLeaf && typeof value === 'string') {
-      this.update(scrubString(value as unknown as string));
+  const cleanMessage: { [E: string]: number | string } = {};
+  for (const [key, value] of Object.entries(logMessage)) {
+    if (SENSITIVE_KEYWORDS.includes(key.toLowerCase()) || typeof value === 'string' && SENSITIVE_KEYWORDS.includes(value.toLowerCase())) {
+      cleanMessage[key] = SENSITIVE_MESSAGE_OVERRIDE;
+    } else {
+      cleanMessage[key] = value;
     }
-    if (SENSITIVE_KEYWORDS.includes(this.key as unknown as string)) {
-      this.remove();
-    }
-  });
-  return logMessage;
+  }
+
+  return cleanMessage;
 };

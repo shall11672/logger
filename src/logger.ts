@@ -1,4 +1,6 @@
+import fs from 'fs';
 import chalk from 'chalk';
+import http from 'http';
 import { scrubMessage } from './util';
 
 export enum LogLevel {
@@ -8,12 +10,17 @@ export enum LogLevel {
   DEBUG = 'DEBUG'
 }
 
+export enum LogType {
+  CONSOLE = 'CONSOLE',
+  FILE = 'FILE',
+  SERVICE = 'SERVICE'
+}
+
 interface LoggerConfig {
   appName: string;
-  logToConsole?: boolean;
   defaultLevel?: LogLevel;
   scrub?: () => any;
-  logger?: (a: LogMessage) => any;
+  logType: LogType;
 }
 
 interface LogMessage {
@@ -21,7 +28,9 @@ interface LogMessage {
   message: string | object
 }
 
-const defaultLogger = ({ logLevel, message }: LogMessage) => {
+const OUTPUT_DIRECTORY = 'out';
+
+const consoleLogger = ({ logLevel, message }: LogMessage) => {
   const COLOR_FUNCTION = {
     [LogLevel.INFO]: chalk.green,
     [LogLevel.WARN]: chalk.yellow,
@@ -33,24 +42,40 @@ const defaultLogger = ({ logLevel, message }: LogMessage) => {
   console.log(colorMessage(logMessage));
 }
 
-// log to console, file, external service
+const fileLogger = ({ logLevel, message }: LogMessage) => {
+  if (!fs.existsSync(OUTPUT_DIRECTORY)) {
+    fs.mkdirSync(OUTPUT_DIRECTORY);
+  }
+  fs.appendFileSync(`${OUTPUT_DIRECTORY}/log.txt`, `${logLevel}: ${typeof message === 'string' ? message : JSON.stringify(message)}\n`);
+}
+
+const serviceLogger = ({ logLevel, message }: LogMessage) => {
+  const data = JSON.stringify({ logLevel, message });
+
+}
+
+const LogTypeToLogger: { [E: string]: (param: LogMessage) => any }  = {
+  [LogType.CONSOLE]: consoleLogger,
+  [LogType.FILE]: fileLogger,
+  [LogType.SERVICE]: serviceLogger
+}
+
 export class Logger {
   appName;
-  logToConsole;
   defaultLevel;
   scrub;
-  logger;
+  logType;
 
   constructor(config: LoggerConfig) {
     this.appName = config.appName;
-    this.logToConsole = config.logToConsole || false;
-    this.defaultLevel = config.defaultLevel || LogLevel.WARN;
+    this.defaultLevel = config.defaultLevel || LogLevel.INFO;
     this.scrub = config.scrub || scrubMessage;
-    this.logger = config.logger || defaultLogger;
+    this.logType = config.logType;
   }
 
   log(message: string | object, level?: LogLevel) {
-    this.logger({
+    const logger = LogTypeToLogger[this.logType];
+    logger({
       logLevel: level || this.defaultLevel,
       message: this.scrub(message)
     });
