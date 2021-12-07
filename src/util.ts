@@ -1,31 +1,56 @@
-export const SENSITIVE_KEYWORDS = ['apikey', 'password', 'username', 'login'];
-export const SENSITIVE_MESSAGE_OVERRIDE = '<REDACTED>';
+import fs from 'fs';
+import chalk from 'chalk';
 
-export const scrubString = (message: string): string => {
-  if (typeof message !== 'string') {
-    throw new Error('Invalid message');
-  }
-  const possibleRedaction = SENSITIVE_KEYWORDS.filter((keyword) => (
-    message.indexOf(keyword) >= 0 || message.toLowerCase().indexOf(keyword) >= 0)
-  );
-  return possibleRedaction.length > 0 ? SENSITIVE_MESSAGE_OVERRIDE : message;
+export enum LogLevel {
+  INFO = 'INFO',
+  WARN = 'WARN',
+  ERROR = 'ERROR',
+  DEBUG = 'DEBUG',
 }
 
-export const scrubMessage = (logMessage: string | object): string | object => {
-  if ((typeof logMessage !== 'string' && typeof logMessage !== 'object') || logMessage === null) return logMessage;
+export enum LogOutputType {
+  CONSOLE = 'CONSOLE',
+  FILE = 'FILE',
+  SERVICE = 'SERVICE',
+}
 
-  if (typeof logMessage === 'string') {
-    return scrubString(logMessage);
+export interface LogMessage {
+  logLevel: LogLevel,
+  message: string | object,
+  logDirectory: string
+}
+
+const DEFAULT_LOG_EXTENSION = '.log.txt';
+
+export const consoleLogger = ({ logLevel, message }: LogMessage) => {
+  const COLOR_FUNCTION = {
+    [LogLevel.INFO]: chalk.green,
+    [LogLevel.WARN]: chalk.yellow,
+    [LogLevel.ERROR]: chalk.red,
+    [LogLevel.DEBUG]: chalk.blue,
+  };
+  const logMessage = typeof message === 'string' ? message : JSON.stringify(message, null, 2);
+  const colorMessage = COLOR_FUNCTION[logLevel];
+  console.log(colorMessage(logMessage));
+};
+
+export const fileLogger = ({ logDirectory, logLevel, message }: LogMessage) => {
+  if (!fs.existsSync(logDirectory)) {
+    fs.mkdirSync(logDirectory);
   }
+  const today = new Date().toISOString();
+  const todayString = today.substring(0, today.indexOf('T')); // 2021-12-07
+  const logMessage = typeof message === 'string' ? message : JSON.stringify(message);
+  fs.appendFileSync(`${logDirectory}/${todayString}${DEFAULT_LOG_EXTENSION}`, `${logLevel}: ${logMessage}\n`);
+};
 
-  const cleanMessage: { [E: string]: number | string } = {};
-  for (const [key, value] of Object.entries(logMessage)) {
-    if (SENSITIVE_KEYWORDS.includes(key.toLowerCase()) || typeof value === 'string' && SENSITIVE_KEYWORDS.includes(value.toLowerCase())) {
-      cleanMessage[key] = SENSITIVE_MESSAGE_OVERRIDE;
-    } else {
-      cleanMessage[key] = value;
-    }
-  }
+export const serviceLogger = ({ logLevel, message }: LogMessage) => {
+  console.log(JSON.stringify({ logLevel, message }));
+  // TODO
+};
 
-  return cleanMessage;
+export const LogTypeToLogger: { [E: string]: (param: LogMessage) => any } = {
+  [LogOutputType.CONSOLE]: consoleLogger,
+  [LogOutputType.FILE]: fileLogger,
+  [LogOutputType.SERVICE]: serviceLogger,
 };

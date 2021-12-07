@@ -1,85 +1,43 @@
-import fs from 'fs';
-import chalk from 'chalk';
-import http from 'http';
-import { scrubMessage } from './util';
+import { scrubMessage } from './scrubber';
+import { LogLevel, LogOutputType, LogTypeToLogger } from './util';
 
-export enum LogLevel {
-  INFO = 'INFO',
-  WARN = 'WARN',
-  ERROR = 'ERROR',
-  DEBUG = 'DEBUG'
-}
+const DEFAULT_OUTPUT_DIRECTORY = './out';
 
-export enum LogType {
-  CONSOLE = 'CONSOLE',
-  FILE = 'FILE',
-  SERVICE = 'SERVICE'
-}
-
-interface LoggerConfig {
+export interface LoggerConfig {
   appName: string;
   defaultLevel?: LogLevel;
   scrub?: () => any;
-  logType: LogType;
-}
-
-interface LogMessage {
-  logLevel: LogLevel,
-  message: string | object
-}
-
-const OUTPUT_DIRECTORY = 'out';
-
-const consoleLogger = ({ logLevel, message }: LogMessage) => {
-  const COLOR_FUNCTION = {
-    [LogLevel.INFO]: chalk.green,
-    [LogLevel.WARN]: chalk.yellow,
-    [LogLevel.ERROR]: chalk.red,
-    [LogLevel.DEBUG]: chalk.blue
-  }
-  const logMessage = typeof message === 'string' ? message : JSON.stringify(message, null, 2)
-  const colorMessage = COLOR_FUNCTION[logLevel];
-  console.log(colorMessage(logMessage));
-}
-
-const fileLogger = ({ logLevel, message }: LogMessage) => {
-  if (!fs.existsSync(OUTPUT_DIRECTORY)) {
-    fs.mkdirSync(OUTPUT_DIRECTORY);
-  }
-  fs.appendFileSync(`${OUTPUT_DIRECTORY}/log.txt`, `${logLevel}: ${typeof message === 'string' ? message : JSON.stringify(message)}\n`);
-}
-
-const serviceLogger = ({ logLevel, message }: LogMessage) => {
-  const data = JSON.stringify({ logLevel, message });
-
-}
-
-const LogTypeToLogger: { [E: string]: (param: LogMessage) => any }  = {
-  [LogType.CONSOLE]: consoleLogger,
-  [LogType.FILE]: fileLogger,
-  [LogType.SERVICE]: serviceLogger
+  logOutputType: LogOutputType;
+  logDirectory?: string;
 }
 
 export class Logger {
   appName;
+
   defaultLevel;
+
   scrub;
-  logType;
+
+  logOutputType;
+
+  logDirectory;
 
   constructor(config: LoggerConfig) {
     this.appName = config.appName;
     this.defaultLevel = config.defaultLevel || LogLevel.INFO;
     this.scrub = config.scrub || scrubMessage;
-    this.logType = config.logType;
+    this.logOutputType = config.logOutputType;
+    this.logDirectory = config.logDirectory || DEFAULT_OUTPUT_DIRECTORY;
   }
 
   log(message: string | object, level?: LogLevel) {
-    const logger = LogTypeToLogger[this.logType];
+    const logger = LogTypeToLogger[this.logOutputType];
     logger({
       logLevel: level || this.defaultLevel,
-      message: this.scrub(message)
+      message: this.scrub(message),
+      logDirectory: this.logDirectory,
     });
   }
 }
 
-
+export { LogOutputType, LogLevel };
