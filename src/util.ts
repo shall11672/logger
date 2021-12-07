@@ -10,19 +10,18 @@ export enum LogLevel {
 
 export enum LogOutputType {
   CONSOLE = 'CONSOLE',
-  FILE = 'FILE',
-  SERVICE = 'SERVICE',
+  FILE = 'FILE'
 }
 
 export interface LogMessage {
   logLevel: LogLevel,
   message: string | object,
-  logDirectory: string
+  logDirectory?: string
 }
 
-const DEFAULT_LOG_EXTENSION = '.log.txt';
+export const DEFAULT_LOG_EXTENSION = '.log.txt';
 
-export const consoleLogger = ({ logLevel, message }: LogMessage) => {
+export const consoleLogger = ({ logLevel, message }: LogMessage): void => {
   const COLOR_FUNCTION = {
     [LogLevel.INFO]: chalk.green,
     [LogLevel.WARN]: chalk.yellow,
@@ -34,23 +33,23 @@ export const consoleLogger = ({ logLevel, message }: LogMessage) => {
   console.log(colorMessage(logMessage));
 };
 
-export const fileLogger = ({ logDirectory, logLevel, message }: LogMessage) => {
+export const fileLogger = ({ logDirectory, logLevel, message }: LogMessage): void => {
+  if (!logDirectory) return;
   if (!fs.existsSync(logDirectory)) {
     fs.mkdirSync(logDirectory);
   }
-  const today = new Date().toISOString();
-  const todayString = today.substring(0, today.indexOf('T')); // 2021-12-07
+
+  const fileName = getFileLoggerFileName();
   const logMessage = typeof message === 'string' ? message : JSON.stringify(message);
-  fs.appendFileSync(`${logDirectory}/${todayString}${DEFAULT_LOG_EXTENSION}`, `${logLevel}: ${logMessage}\n`);
+  fs.appendFileSync(`${logDirectory}/${fileName}${DEFAULT_LOG_EXTENSION}`, `${logLevel}: ${logMessage}\n`);
 };
 
-export const serviceLogger = ({ logLevel, message }: LogMessage) => {
-  console.log(JSON.stringify({ logLevel, message }));
-  // TODO
-};
+export const getFileLoggerFileName = () => {
+  const today = new Date().toISOString();
+  return today.substring(0, today.indexOf('T')); // 2021-12-07
+}
 
 export const LogTypeToLogger: { [E: string]: (param: LogMessage) => any } = {
   [LogOutputType.CONSOLE]: consoleLogger,
-  [LogOutputType.FILE]: fileLogger,
-  [LogOutputType.SERVICE]: serviceLogger,
+  [LogOutputType.FILE]: fileLogger
 };

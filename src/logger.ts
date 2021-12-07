@@ -26,7 +26,7 @@ export class Logger {
     this.appName = config.appName;
     this.defaultLevel = config.defaultLevel || LogLevel.INFO;
     this.scrub = config.scrub || scrubMessage;
-    this.logOutputType = config.logOutputType;
+    this.logOutputType = config.logOutputType || LogOutputType.CONSOLE;
     this.logDirectory = config.logDirectory || DEFAULT_OUTPUT_DIRECTORY;
   }
 
