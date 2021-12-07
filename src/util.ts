@@ -10,7 +10,7 @@ export enum LogLevel {
 
 export enum LogOutputType {
   CONSOLE = 'CONSOLE',
-  FILE = 'FILE'
+  FILE = 'FILE',
 }
 
 export interface LogMessage {
@@ -33,6 +33,11 @@ export const consoleLogger = ({ logLevel, message }: LogMessage): void => {
   console.log(colorMessage(logMessage));
 };
 
+export const getFileLoggerFileName = () => {
+  const today = new Date().toISOString();
+  return today.substring(0, today.indexOf('T')); // 2021-12-07
+};
+
 export const fileLogger = ({ logDirectory, logLevel, message }: LogMessage): void => {
   if (!logDirectory) return;
   if (!fs.existsSync(logDirectory)) {
@@ -44,12 +49,7 @@ export const fileLogger = ({ logDirectory, logLevel, message }: LogMessage): voi
   fs.appendFileSync(`${logDirectory}/${fileName}${DEFAULT_LOG_EXTENSION}`, `${logLevel}: ${logMessage}\n`);
 };
 
-export const getFileLoggerFileName = () => {
-  const today = new Date().toISOString();
-  return today.substring(0, today.indexOf('T')); // 2021-12-07
-}
-
 export const LogTypeToLogger: { [E: string]: (param: LogMessage) => any } = {
   [LogOutputType.CONSOLE]: consoleLogger,
-  [LogOutputType.FILE]: fileLogger
+  [LogOutputType.FILE]: fileLogger,
 };

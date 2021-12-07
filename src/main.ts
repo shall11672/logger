@@ -1,7 +1,7 @@
 import { Logger, LogLevel, LogOutputType } from './logger';
 
 const consoleLogger = new Logger({ appName: 'test', logOutputType: LogOutputType.CONSOLE, logDirectory: './out' });
-consoleLogger.log('Hello World', LogLevel.INFO);
+consoleLogger.log('Hello World', LogLevel.DEBUG);
 consoleLogger.log({ apikey: '1234567', message: 'the api key better be redacted!' });
 consoleLogger.log({ noSensitiveInfo: 'everything should be here!' });
 
