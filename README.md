@@ -3,9 +3,9 @@
 
 
 ### Setup
-Install Node [16](https://nodejs.dev/download) (or 14, [nvm for the win](https://github.com/nvm-sh/nvm))
+Install Node [14](https://nodejs.dev/download) (or 16, [nvm for the win](https://github.com/nvm-sh/nvm))
 
-`npm ci`
+`npm install`
 
 `npm run start`
 
